@@ -5,30 +5,34 @@
       <h3>{{ teamName }} - {{ matchDate }}</h3>
     </div>
 
-    <div v-for="fundament in fundaments" :key="fundament.name">
-      <h2>{{ fundament.name }}</h2>
-      <table border="1">
-        <thead>
-          <tr>
-            <th>Jogador</th>
-            <th>Acertos</th>
-            <th>Erros</th>
-            <th>Total</th>
-            <th>Erros (%)</th>
-            <th>Aproveitamento (%)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="player in detailedStats" :key="player.name">
-            <td>{{ player.name }}</td>
-            <td>{{ player[fundament.key].good }}</td>
-            <td>{{ player[fundament.key].error }}</td>
-            <td>{{ player[fundament.key].total }}</td>
-            <td>{{ player[fundament.key].errorPercentage }}</td>
-            <td>{{ player[fundament.key].efficiency }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- Métricas de Eficiência -->
+    <h2>Métricas de Eficiência</h2>
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Jogador</th>
+          <th>Aprov. Ataque (%)</th>
+          <th>Efic. Passe (%)</th>
+          <th>Aprov. Saque (%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="player in players" :key="player.name">
+          <td>{{ player.name }}</td>
+          <td>{{ calculateAttackEfficiency(player.stats) }}</td>
+          <td>{{ calculatePassEfficiency(player.stats) }}</td>
+          <td>{{ calculateServeEfficiency(player.stats) }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Gráficos de Barras -->
+    <h2>Desempenho por Ação</h2>
+    <div class="charts-grid">
+      <div v-for="action in Object.keys(teamStats)" :key="action" class="chart-container">
+        <h3>{{ action }}</h3>
+        <Bar :data="getBarChartData(action)" />
+      </div>
     </div>
 
     <div class="actions">
