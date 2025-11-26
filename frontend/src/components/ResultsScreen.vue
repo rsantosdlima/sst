@@ -5,34 +5,30 @@
       <h3>{{ teamName }} - {{ matchDate }}</h3>
     </div>
 
-    <!-- Métricas de Eficiência -->
-    <h2>Métricas de Eficiência</h2>
-    <table border="1">
-      <thead>
-        <tr>
-          <th>Jogador</th>
-          <th>Aprov. Ataque (%)</th>
-          <th>Efic. Passe (%)</th>
-          <th>Aprov. Saque (%)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="player in players" :key="player.name">
-          <td>{{ player.name }}</td>
-          <td>{{ calculateAttackEfficiency(player.stats) }}</td>
-          <td>{{ calculatePassEfficiency(player.stats) }}</td>
-          <td>{{ calculateServeEfficiency(player.stats) }}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <!-- Gráficos de Barras -->
-    <h2>Desempenho por Ação</h2>
-    <div class="charts-grid">
-      <div v-for="action in Object.keys(teamStats)" :key="action" class="chart-container">
-        <h3>{{ action }}</h3>
-        <Bar :data="getBarChartData(action)" />
-      </div>
+    <div v-for="fundament in fundaments" :key="fundament.name">
+      <h2>{{ fundament.name }}</h2>
+      <table border="1">
+        <thead>
+          <tr>
+            <th>Jogador</th>
+            <th>Acertos</th>
+            <th>Erros</th>
+            <th>Total</th>
+            <th>Erros (%)</th>
+            <th>Aproveitamento (%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="player in detailedStats" :key="player.name">
+            <td>{{ player.name }}</td>
+            <td>{{ player[fundament.key].good }}</td>
+            <td>{{ player[fundament.key].error }}</td>
+            <td>{{ player[fundament.key].total }}</td>
+            <td>{{ player[fundament.key].errorPercentage }}</td>
+            <td>{{ player[fundament.key].efficiency }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <div class="actions">
@@ -44,107 +40,117 @@
 </template>
 
 <script>
-import { Bar } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
-
 export default {
-  components: { Bar },
   props: ['teamName', 'matchDate', 'sets', 'currentSetIndex'],
+  data() {
+    return {
+      fundaments: [
+        { name: 'Ataque', key: 'attack' },
+        { name: 'Passe', key: 'pass' },
+        { name: 'Saque', key: 'serve' },
+        { name: 'Defesa', key: 'defense' },
+        { name: 'Bloqueio', key: 'block' },
+      ]
+    }
+  },
   computed: {
     players() {
       return this.sets[this.currentSetIndex]?.players || [];
     },
-    teamStats() {
-      // Team stats logic for the current set
-      const stats = {};
-      this.players.forEach(player => {
-        for (const actionName in player.stats) {
-          if (!stats[actionName]) {
-            stats[actionName] = {};
+    detailedStats() {
+      return this.players.map(player => {
+        const stats = player.stats;
+        const attackGood = stats['Ataque']?.['Bom'] || 0;
+        const attackError = stats['Ataque']?.['Erro'] || 0;
+        const attackTotal = attackGood + attackError;
+
+        const passA = stats['Passe']?.['A'] || 0;
+        const passB = stats['Passe']?.['B'] || 0;
+        const passC = stats['Passe']?.['C'] || 0;
+        const passError = stats['Passe']?.['ERRO'] || 0;
+        const passTotal = passA + passB + passC + passError;
+
+        const serveGood = stats['Saque']?.['Bom'] || 0;
+        const serveError = stats['Saque']?.['Erro'] || 0;
+        const serveTotal = serveGood + serveError;
+
+        const defenseGood = (stats['Defesa']?.['A'] || 0) + (stats['Defesa']?.['B'] || 0);
+        const defenseError = stats['Defesa']?.['Erro'] || 0;
+        const defenseTotal = defenseGood + defenseError;
+
+        const blockGood = stats['Bloqueio']?.['Bom'] || 0;
+        const blockError = stats['Bloqueio']?.['Erro'] || 0;
+        const blockTotal = blockGood + blockError;
+
+        return {
+          name: player.name,
+          attack: {
+            good: attackGood,
+            error: attackError,
+            total: attackTotal,
+            errorPercentage: attackTotal > 0 ? ((attackError / attackTotal) * 100).toFixed(2) : 0,
+            efficiency: attackTotal > 0 ? (((attackGood - attackError) / attackTotal) * 100).toFixed(2) : 0,
+          },
+          pass: {
+            good: passA + passB + passC,
+            error: passError,
+            total: passTotal,
+            errorPercentage: passTotal > 0 ? ((passError / passTotal) * 100).toFixed(2) : 0,
+            efficiency: passTotal > 0 ? (((passA * 100 + passB * 50 + passC * 25) / passTotal)).toFixed(2) : 0,
+          },
+          serve: {
+            good: serveGood,
+            error: serveError,
+            total: serveTotal,
+            errorPercentage: serveTotal > 0 ? ((serveError / serveTotal) * 100).toFixed(2) : 0,
+            efficiency: serveTotal > 0 ? (((serveGood - serveError) / serveTotal) * 100).toFixed(2) : 0,
+          },
+          defense: {
+              good: defenseGood,
+              error: defenseError,
+              total: defenseTotal,
+              errorPercentage: defenseTotal > 0 ? ((defenseError / defenseTotal) * 100).toFixed(2) : 0,
+              efficiency: defenseTotal > 0 ? (((defenseGood - defenseError) / defenseTotal) * 100).toFixed(2) : 0,
+          },
+          block: {
+              good: blockGood,
+              error: blockError,
+              total: blockTotal,
+              errorPercentage: blockTotal > 0 ? ((blockError / blockTotal) * 100).toFixed(2) : 0,
+              efficiency: blockTotal > 0 ? (((blockGood - blockError) / blockTotal) * 100).toFixed(2) : 0,
           }
-          for (const type in player.stats[actionName]) {
-            if (!stats[actionName][type]) {
-              stats[actionName][type] = 0;
-            }
-            stats[actionName][type] += player.stats[actionName][type];
-          }
-        }
+        };
       });
-      return stats;
     }
   },
   methods: {
-    calculateAttackEfficiency(stats) {
-      const good = stats['Ataque']?.['Bom'] || 0;
-      const error = stats['Ataque']?.['Erro'] || 0;
-      const total = good + error;
-      return total > 0 ? (((good - error) / total) * 100).toFixed(2) : 0;
-    },
-    calculatePassEfficiency(stats) {
-      const a = stats['Passe']?.['A'] || 0;
-      const b = stats['Passe']?.['B'] || 0;
-      const c = stats['Passe']?.['C'] || 0;
-      const error = stats['Passe']?.['ERRO'] || 0;
-      const total = a + b + c + error;
-      return total > 0 ? (((a * 100 + b * 50) / total)).toFixed(2) : 0;
-    },
-    calculateServeEfficiency(stats) {
-      const good = stats['Saque']?.['Bom'] || 0;
-      const error = stats['Saque']?.['Erro'] || 0;
-      const total = good + error;
-      return total > 0 ? (((good - error) / total) * 100).toFixed(2) : 0;
-    },
-    getBarChartData(actionName) {
-      const labels = this.players.map(p => p.name);
-      const datasets = [];
-      const actionTypes = Object.keys(this.teamStats[actionName] || {});
-
-      actionTypes.forEach(type => {
-        datasets.push({
-          label: type,
-          data: this.players.map(p => p.stats[actionName]?.[type] || 0),
-          backgroundColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
-        });
-      });
-
-      return { labels, datasets };
-    },
     async exportPDF() {
       const doc = new jsPDF();
       doc.text(`${this.teamName} - Set ${this.currentSetIndex + 1}`, 14, 16);
       doc.text(`Data: ${this.matchDate}`, 14, 24);
+      let startY = 30;
 
-      const efficiencyData = this.players.map(p => [
-        p.name,
-        this.calculateAttackEfficiency(p.stats),
-        this.calculatePassEfficiency(p.stats),
-        this.calculateServeEfficiency(p.stats)
-      ]);
+      this.fundaments.forEach(fundament => {
+        doc.text(fundament.name, 14, startY);
+        const tableData = this.detailedStats.map(player => [
+          player.name,
+          player[fundament.key].good,
+          player[fundament.key].error,
+          player[fundament.key].total,
+          player[fundament.key].errorPercentage,
+          player[fundament.key].efficiency,
+        ]);
 
-      doc.autoTable({
-        startY: 30,
-        head: [['Jogador', 'Aprov. Ataque (%)', 'Efic. Passe (%)', 'Aprov. Saque (%)']],
-        body: efficiencyData,
-      });
+        doc.autoTable({
+          startY: startY + 5,
+          head: [['Jogador', 'Acertos', 'Erros', 'Total', 'Erros (%)', 'Aproveitamento (%)']],
+          body: tableData,
+        });
 
-      const rawData = [];
-      this.players.forEach(p => {
-        rawData.push([p.name, '', '', '']);
-        for(const action in p.stats) {
-          for(const type in p.stats[action]) {
-            rawData.push(['', action, type, p.stats[action][type]]);
-          }
-        }
-      });
-
-      doc.autoTable({
-        startY: doc.autoTable.previous.finalY + 10,
-        head: [['Jogador', 'Ação', 'Tipo', 'Total']],
-        body: rawData,
+        startY = doc.autoTable.previous.finalY + 15;
       });
 
       const pdfBlob = doc.output('blob');
@@ -158,14 +164,12 @@ export default {
           });
         } catch (error) {
           console.error('Erro ao compartilhar:', error);
-          // Fallback para download se o compartilhamento falhar
           const link = document.createElement('a');
           link.href = URL.createObjectURL(pdfBlob);
           link.download = fileName;
           link.click();
         }
       } else {
-        // Fallback para download em desktops
         const link = document.createElement('a');
         link.href = URL.createObjectURL(pdfBlob);
         link.download = fileName;
@@ -183,11 +187,11 @@ export default {
 table {
   width: 100%;
   margin-bottom: 30px;
+  border-collapse: collapse;
 }
-.charts-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
 }
 .actions {
   margin-top: 30px;
