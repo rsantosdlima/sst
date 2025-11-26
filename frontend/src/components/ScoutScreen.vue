@@ -15,7 +15,7 @@
         </button>
       </div>
     </div>
-    <button class="finish-btn" @click="$emit('finishScout')">Finalizar Set</button>
+    <button class="finish-btn" @click="openScoreModal">Finalizar Set</button>
 
     <!-- Player Selection Modal -->
     <div v-if="showPlayerModal" class="modal-overlay" @click.self="closePlayerModal">
@@ -29,6 +29,20 @@
         <button class="close-btn" @click="closePlayerModal">Cancelar</button>
       </div>
     </div>
+
+    <!-- Score Input Modal -->
+    <div v-if="showScoreModal" class="modal-overlay" @click.self="closeScoreModal">
+      <div class="modal-content">
+        <h3>Placar Final do Set</h3>
+        <div class="score-inputs">
+          <input type="number" v-model="ourScore" :placeholder="teamName || 'Sua Equipe'">
+          <span>x</span>
+          <input type="number" v-model="opponentScore" placeholder="Adversário">
+        </div>
+        <button @click="submitScore">Confirmar Placar</button>
+        <button class="close-btn" @click="closeScoreModal">Cancelar</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -38,6 +52,9 @@ export default {
   data() {
     return {
       showPlayerModal: false,
+      showScoreModal: false,
+      ourScore: '',
+      opponentScore: '',
       selectedAction: {
         name: null,
         type: null
@@ -62,55 +79,52 @@ export default {
     assignAction(player) {
       this.$emit('action', { player, action: this.selectedAction });
       this.closePlayerModal();
+    },
+    openScoreModal() {
+      this.showScoreModal = true;
+    },
+    closeScoreModal() {
+      this.showScoreModal = false;
+    },
+    submitScore() {
+      this.$emit('finishScout', {
+        ourScore: parseInt(this.ourScore, 10),
+        opponentScore: parseInt(this.opponentScore, 10)
+      });
+      this.closeScoreModal();
     }
   }
 };
 </script>
 
 <style scoped>
-.scout-container {
-  padding: 15px;
-}
-.header {
-  margin-bottom: 20px;
-}
+.scout-container { padding: 15px; }
+.header { margin-bottom: 20px; }
 .actions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 15px;
 }
-.action-group {
-  background-color: #fff;
-  padding: 10px;
-  border-radius: 8px;
-}
+.action-group { background-color: #fff; padding: 10px; border-radius: 8px; }
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background-color: rgba(0,0,0,0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: flex; justify-content: center; align-items: center;
 }
 .modal-content {
-  background-color: white;
-  padding: 20px;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 500px;
+  background-color: white; padding: 20px; border-radius: 8px;
+  width: 90%; max-width: 500px;
 }
 .players-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 20px;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; margin-bottom: 20px;
 }
-.finish-btn, .close-btn {
-  width: 100%;
-  padding: 12px;
-  margin-top: 20px;
+.finish-btn, .close-btn { width: 100%; padding: 12px; margin-top: 20px; }
+.score-inputs {
+  display: flex; justify-content: center; align-items: center;
+  gap: 15px; margin: 20px 0;
+}
+.score-inputs input {
+  width: 80px; padding: 10px; text-align: center; font-size: 1.2em;
 }
 </style>

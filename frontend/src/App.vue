@@ -92,7 +92,8 @@ export default {
         playerRef.stats[action.name][action.type]++;
       }
     },
-    showResultsScreen() {
+    showResultsScreen(score) {
+      this.sets[this.currentSetIndex].score = score;
       this.matchStarted = false;
       this.showResults = true;
     },
