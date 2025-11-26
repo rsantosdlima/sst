@@ -2,6 +2,10 @@
   <div id="app" class="container">
     <div v-if="!matchStarted && !showResults">
       <h1>Configuração da Partida</h1>
+      <div class="match-info-group">
+        <input v-model="teamName" placeholder="Nome do Time">
+        <input type="date" v-model="matchDate">
+      </div>
       <div class="player-input-group">
         <input v-model="newPlayer" @keyup.enter="addPlayer" placeholder="Nome ou número do jogador">
         <button @click="addPlayer">Adicionar Jogador</button>
@@ -18,12 +22,19 @@
     <ScoutScreen
       v-else-if="matchStarted && !showResults"
       :players="players"
+      :teamName="teamName"
+      :matchDate="matchDate"
+      :currentSetIndex="currentSetIndex"
       @action="recordAction"
       @finishScout="showResultsScreen"
     />
     <ResultsScreen
       v-else-if="showResults"
-      :players="players"
+      :teamName="teamName"
+      :matchDate="matchDate"
+      :sets="sets"
+      :currentSetIndex="currentSetIndex"
+      @nextSet="startNextSet"
       @reset="resetApp"
     />
   </div>
@@ -40,8 +51,12 @@ export default {
   },
   data() {
     return {
+      teamName: '',
+      matchDate: new Date().toISOString().slice(0, 10),
       newPlayer: '',
       players: [],
+      sets: [],
+      currentSetIndex: 0,
       matchStarted: false,
       showResults: false
     };
@@ -49,7 +64,7 @@ export default {
   methods: {
     addPlayer() {
       if (this.newPlayer.trim() !== '') {
-        this.players.push({ name: this.newPlayer.trim(), stats: {} });
+        this.players.push({ name: this.newPlayer.trim() });
         this.newPlayer = '';
       }
     },
@@ -58,25 +73,22 @@ export default {
     },
     startMatch() {
       if (this.players.length > 0) {
+        this.sets.push({ players: JSON.parse(JSON.stringify(this.players.map(p => ({...p, stats: {}})))) });
         this.matchStarted = true;
       }
     },
     recordAction(event) {
       const { player, action } = event;
-      const playerRef = this.players.find(p => p.name === player.name);
+      const set = this.sets[this.currentSetIndex];
+      const playerRef = set.players.find(p => p.name === player.name);
 
       if (playerRef) {
-        // Inicializa o objeto de estatísticas para a ação, se não existir
         if (!playerRef.stats[action.name]) {
           playerRef.stats[action.name] = {};
         }
-
-        // Inicializa o contador para o tipo de ação, se não existir
         if (!playerRef.stats[action.name][action.type]) {
           playerRef.stats[action.name][action.type] = 0;
         }
-
-        // Incrementa o contador
         playerRef.stats[action.name][action.type]++;
       }
     },
@@ -84,8 +96,18 @@ export default {
       this.matchStarted = false;
       this.showResults = true;
     },
+    startNextSet() {
+      this.currentSetIndex++;
+      this.sets.push({ players: JSON.parse(JSON.stringify(this.players.map(p => ({...p, stats: {}})))) });
+      this.showResults = false;
+      this.matchStarted = true;
+    },
     resetApp() {
+      this.teamName = '';
+      this.matchDate = new Date().toISOString().slice(0, 10);
       this.players = [];
+      this.sets = [];
+      this.currentSetIndex = 0;
       this.showResults = false;
     }
   }
